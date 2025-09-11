@@ -46,7 +46,7 @@ tiled.activeAssetChanged.connect(function (asset) {
         return;
     }
     let result = tiled.prompt("Enter Wakatime API key", "waka_*******");
-
+    
 
     tiled.log("Active asset changed: " + asset.fileName);
 
@@ -73,6 +73,11 @@ tiled.activeAsset.modifiedChanged.connect(function () {
 function saveToFile(filePath, content) {
     let file = new File(filePath, File.WriteOnly);
     if (!file.open()) {
-        tiled.alert("Unable to open file " + filePath)
+        tiled.alert("Unable to open file " + filePath);
+        return;
     }
+
+    file.write(content);
+    file.close();
+    titled.log("Saved Wakatime API key to " + filePath)
 }
