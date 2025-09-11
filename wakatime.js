@@ -6,9 +6,9 @@ var WakaTime = {
         let currentDate = Date.now()
 
         // for further tweaks : this is for less than 2 mins, etc
-        if (!isWrite && this.lastObj == filePath && (now - lastTime < 120000)) {
-            return;
-        }
+        // if (!isWrite && this.lastObj == filePath && (now - lastTime < 120000)) {
+        //     return;
+        // }
 
         let args = [
             "--entity", filePath,
@@ -43,5 +43,17 @@ tiled.activeAssetChanged.connect(function (asset) {
 
     tiled.log("Active asset changed: " + asset.fileName);
 
-    WakaTime.sendHeartbeat(asset.fileName, false);
+    WakaTime.sendHeartbeat(asset.fileName, false, "changed assets");
+});
+
+if (tiled.activeAsset !== null) {
+    let oAList = tiled.openAssets;
+    for (let i = 0; i < oAList.length; ++i) {
+        tiled.log(i + ": " + oAList[i].fileName);
+    }
+    tiled.log("Active asset exists");
+}
+
+tiled.activeAsset.modifiedChanged.connect(function (asset) {
+    WakaTime.sendHeartbeat(asset.fileName, false, "modifiying objects");
 });
