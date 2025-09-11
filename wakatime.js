@@ -43,7 +43,7 @@ tiled.activeAssetChanged.connect(function (asset) {
 
     tiled.log("Active asset changed: " + asset.fileName);
 
-    WakaTime.sendHeartbeat(asset.fileName, false, "changed assets");
+    WakaTime.pushHeartBeat(asset.fileName, false, "changed assets");
 });
 
 if (tiled.activeAsset !== null) {
@@ -54,6 +54,10 @@ if (tiled.activeAsset !== null) {
     tiled.log("Active asset exists");
 }
 
-tiled.activeAsset.modifiedChanged.connect(function (asset) {
-    WakaTime.sendHeartbeat(asset.fileName, false, "modifiying objects");
+tiled.activeAsset.modifiedChanged.connect(function () {
+    if (tiled.activeAsset) {
+        tiled.log("modifying objects");
+        WakaTime.pushHeartBeat(tiled.activeAsset.fileName, false, "modifying objects");
+    }
 });
+
