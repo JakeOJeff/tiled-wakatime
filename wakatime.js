@@ -46,11 +46,11 @@ tiled.activeAssetChanged.connect(function (asset) {
         return;
     }
 
-    let loadKey = loadFromFile("./key.txt");
-    if (loadKey) {
-        tiled.log("Loaded API key");
-    }
-    else {
+    let loadKey = " " //loadFromFile("./key.txt");
+    // if (loadKey) {
+    //     tiled.log("Loaded API key");
+    // }
+    // else {
         let result = tiled.prompt("Enter Wakatime API key", "");
 
         if (result != null || result != "") {
@@ -58,9 +58,9 @@ tiled.activeAssetChanged.connect(function (asset) {
         }
 
         loadKey = result;
-    }
-    
-    
+    // }
+
+
 
     tiled.log("Active asset changed: " + asset.fileName);
 
@@ -85,27 +85,19 @@ tiled.activeAsset.modifiedChanged.connect(function () {
 
 
 function saveToFile(filePath, content) {
-    let file = new File(filePath, File.WriteOnly);
-    if (!file.open()) {
-        tiled.alert("Unable to open file " + filePath);
-        return;
-    }
+    let file = new File(content, filePath);
 
-    file.write(content);
-    file.close();
     titled.log("Saved Wakatime API key to " + filePath)
 }
 
 function loadFromFile(filePath) {
 
-    let file = new File(filePath, File.ReadOnly);
-    if (!file.open()) {
-        tiled.alert("Unable to open file " + filePath);
-        return;
-    }
+    fetch(filePath)
+        .then(response => response.text())
+        .then((data) => {
+            console.log(data)
+            return data;
 
-    let data = file.readAll();
-    file.close();
-
-    return data;
+        })
+    return;
 }
