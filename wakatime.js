@@ -1,3 +1,5 @@
+
+
 var WakaTime = {
     lastObj: null,
     lastTimeUsed: 0,
@@ -43,6 +45,8 @@ tiled.activeAssetChanged.connect(function (asset) {
         tiled.log("No active asset");
         return;
     }
+    let result = tiled.prompt("Enter Wakatime API key", "waka_*******");
+
 
     tiled.log("Active asset changed: " + asset.fileName);
 
@@ -64,3 +68,11 @@ tiled.activeAsset.modifiedChanged.connect(function () {
     }
 });
 
+
+
+function saveToFile(filePath, content) {
+    let file = new File(filePath, File.WriteOnly);
+    if (!file.open()) {
+        tiled.alert("Unable to open file " + filePath)
+    }
+}
