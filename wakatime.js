@@ -1,8 +1,8 @@
 var WakaTime = {
-    lastObj:  null,
+    lastObj: null,
     lastTimeUsed: 0,
 
-    pushHeartBeat: function(filePath, isWrite, category) {
+    pushHeartBeat: function (filePath, isWrite, category) {
         let currentDate = Date.now()
 
         // for further tweaks : this is for less than 2 mins, etc
@@ -35,6 +35,13 @@ var WakaTime = {
 }
 
 
-tiled.mapOpened.connect(function(map) {
-    WakaTime.pushHeartBeat(map.fileName, false, "opened tilemap")
+tiled.activeAssetChanged.connect(function (asset) {
+    if (!asset) {
+        tiled.log("No active asset");
+        return;
+    }
+
+    tiled.log("Active asset changed: " + asset.fileName);
+
+    WakaTime.sendHeartbeat(asset.fileName, false);
 });
