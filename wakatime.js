@@ -1,4 +1,22 @@
 
+const SCRIPT_DIR = FileInfo.path(__filename);
+let startTime = Date.now();
+
+function showElapsedTime() {
+    let elapsed = Math.floor((Date.now() - startTime) / 1000);
+    let minutes = Math.floor(elapsed / 60);
+    let seconds = elapsed % 60;
+    tiled.alert("Elapsed editing time: " + minutes + "m " + seconds + "s");
+}
+
+
+tiled.extendMenu("View", [
+    {
+        text: "Show WakaTime Timer",
+        triggered: () => showElapsedTime()
+    }
+]);
+
 
 var WakaTime = {
     lastObj: null,
@@ -38,15 +56,16 @@ var WakaTime = {
         this.lastTimeUsed = currentDate;
     }
 }
-
+//
 
 tiled.activeAssetChanged.connect(function (asset) {
     if (!asset) {
         tiled.log("No active asset");
         return;
     }
+    let keyFile = getLocalPath("key.txt");
 
-    let loadkey = loadFromFile("./key.txt");
+    let loadkey = loadFromFile(keyFile);
     if (loadkey) {
         tiled.log("Loaded API key");
     }
@@ -67,6 +86,7 @@ tiled.activeAssetChanged.connect(function (asset) {
     WakaTime.pushHeartBeat(asset.fileName, false, "debugging");
 });
 
+//
 if (tiled.activeAsset !== null) {
     let oAList = tiled.openAssets;
     for (let i = 0; i < oAList.length; ++i) {
@@ -74,22 +94,25 @@ if (tiled.activeAsset !== null) {
     }
     tiled.log("Active asset exists");
 }
-
+//
 tiled.activeAsset.modifiedChanged.connect(function () {
     if (tiled.activeAsset) {
         tiled.log("modifying objects");
         WakaTime.pushHeartBeat(tiled.activeAsset.fileName, false, "building");
     }
 });
-
+//
 
 
 function saveToFile(filePath, content) {
     try {
-        let file = new File(filePath, File.WriteOnly);
-        file.write(content);
-        file.commit(); // finalize write
-        file.close();
+        let file = new File(filePath);              // step 1
+        if (!file.open(File.WriteOnly | File.Text)) { // step 2
+            tiled.log("ERR: Could not open file for writing: " + filePath);
+            return false;
+        }
+        file.write(content); // step 3
+        file.close();        // step 4
         tiled.log("Saved Wakatime API key to " + filePath);
         return true;
     } catch (e) {
@@ -100,15 +123,20 @@ function saveToFile(filePath, content) {
 
 function loadFromFile(filePath) {
     try {
-        let file = new File(filePath, File.ReadOnly);
+        let file = new File(filePath);
+        if (!file.open(File.ReadOnly | File.Text)) {
+            return null;
+        }
         let content = file.readAll();
         file.close();
         return content.trim();
     } catch (e) {
-        // file may not exist first time
         tiled.log("Could not load file (" + filePath + "): " + e);
         return null;
     }
 }
 
 
+function getLocalPath(fileName) {
+    return FileInfo.joinPaths(SCRIPT_DIR, fileName);
+}
