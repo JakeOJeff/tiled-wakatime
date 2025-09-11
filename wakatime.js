@@ -19,7 +19,14 @@ var WakaTime = {
             args.push("--write");
         }
 
+        //temp exe location
+        let exe = "E:\\Wakatime\\wakatime-cli.exe"
 
+        try {
+            tiled.proces.exec(exe, args);
+        } catch (e) {
+            tiled.alert("Failed to run wakatime : " + e);
+        }
 
         this.lastObj = filePath;
         this.lastTimeUsed = currentDate;
