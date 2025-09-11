@@ -21,13 +21,16 @@ var WakaTime = {
         }
 
         //temp exe location
-        let exe = "E:\\Wakatime\\wakatime-cli.exe"
+        let exe = "E:/Wakatime/wakatime-cli.exe";
 
         try {
-            tiled.proces.exec(exe, args);
+            let proc = new Process();
+            proc.startDetached();  // run without waiting
+            tiled.log("Started wakatime for " + filePath);
         } catch (e) {
-            tiled.alert("Failed to run wakatime : " + e);
+            tiled.log("ERR: Failed to run wakatime : " + e);
         }
+
 
         this.lastObj = filePath;
         this.lastTimeUsed = currentDate;
@@ -43,7 +46,7 @@ tiled.activeAssetChanged.connect(function (asset) {
 
     tiled.log("Active asset changed: " + asset.fileName);
 
-    WakaTime.pushHeartBeat(asset.fileName, false, "changed assets");
+    WakaTime.pushHeartBeat(asset.fileName, false, "debugging");
 });
 
 if (tiled.activeAsset !== null) {
@@ -57,7 +60,7 @@ if (tiled.activeAsset !== null) {
 tiled.activeAsset.modifiedChanged.connect(function () {
     if (tiled.activeAsset) {
         tiled.log("modifying objects");
-        WakaTime.pushHeartBeat(tiled.activeAsset.fileName, false, "modifying objects");
+        WakaTime.pushHeartBeat(tiled.activeAsset.fileName, false, "building");
     }
 });
 
