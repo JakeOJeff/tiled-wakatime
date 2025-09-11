@@ -46,19 +46,19 @@ tiled.activeAssetChanged.connect(function (asset) {
         return;
     }
 
-    let loadKey = " " //loadFromFile("./key.txt");
-    // if (loadKey) {
-    //     tiled.log("Loaded API key");
-    // }
-    // else {
+    let loadkey = loadFromFile("./key.txt");
+    if (loadkey) {
+        tiled.log("Loaded API key");
+    }
+    else {
         let result = tiled.prompt("Enter Wakatime API key", "");
 
-        if (result != null || result != "") {
+        if (result != null || result.trim() != "") {
             saveToFile("./key.txt", result)
+            loadkey = result.trim();
         }
 
-        loadKey = result;
-    // }
+    }
 
 
 
@@ -85,19 +85,30 @@ tiled.activeAsset.modifiedChanged.connect(function () {
 
 
 function saveToFile(filePath, content) {
-    let file = new File(content, filePath);
-
-    titled.log("Saved Wakatime API key to " + filePath)
+    try {
+        let file = new File(filePath, File.WriteOnly);
+        file.write(content);
+        file.commit(); // finalize write
+        file.close();
+        tiled.log("Saved Wakatime API key to " + filePath);
+        return true;
+    } catch (e) {
+        tiled.log("ERR: Failed to save file: " + e);
+        return false;
+    }
 }
 
 function loadFromFile(filePath) {
-
-    fetch(filePath)
-        .then(response => response.text())
-        .then((data) => {
-            console.log(data)
-            return data;
-
-        })
-    return;
+    try {
+        let file = new File(filePath, File.ReadOnly);
+        let content = file.readAll();
+        file.close();
+        return content.trim();
+    } catch (e) {
+        // file may not exist first time
+        tiled.log("Could not load file (" + filePath + "): " + e);
+        return null;
+    }
 }
+
+
