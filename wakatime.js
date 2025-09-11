@@ -9,15 +9,16 @@ function showElapsedTime() {
     tiled.alert("Elapsed editing time: " + minutes + "m " + seconds + "s");
 }
 
+var displayTimerAction = tiled.registerAction("displayTimer", function (action) {
+    tiled.log(showElapsedTime());
+    // tiled.log(action.text + " was " + (action.checked ? "checked" : "unchecked"))
+})
 
+displayTimerAction.text = "Display Wakatime"
 tiled.extendMenu("View", [
-    {
-        text: "Show WakaTime Timer",
-        triggered: () => showElapsedTime()
-    }
+    { action: "displayTimer", before: "ShowGrid" },
+    { separator: true }
 ]);
-
-
 var WakaTime = {
     lastObj: null,
     lastTimeUsed: 0,
@@ -55,6 +56,8 @@ var WakaTime = {
         this.lastObj = filePath;
         this.lastTimeUsed = currentDate;
     }
+
+    
 }
 //
 
