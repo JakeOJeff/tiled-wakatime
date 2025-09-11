@@ -45,7 +45,21 @@ tiled.activeAssetChanged.connect(function (asset) {
         tiled.log("No active asset");
         return;
     }
-    let result = tiled.prompt("Enter Wakatime API key", "waka_*******");
+
+    let loadKey = loadFromFile("./key.txt");
+    if (loadKey) {
+        tiled.log("Loaded API key");
+    }
+    else {
+        let result = tiled.prompt("Enter Wakatime API key", "");
+
+        if (result != null || result != "") {
+            saveToFile("./key.txt", result)
+        }
+
+        loadKey = result;
+    }
+    
     
 
     tiled.log("Active asset changed: " + asset.fileName);
@@ -80,4 +94,18 @@ function saveToFile(filePath, content) {
     file.write(content);
     file.close();
     titled.log("Saved Wakatime API key to " + filePath)
+}
+
+function loadFromFile(filePath) {
+
+    let file = new File(filePath, File.ReadOnly);
+    if (!file.open()) {
+        tiled.alert("Unable to open file " + filePath);
+        return;
+    }
+
+    let data = file.readAll();
+    file.close();
+
+    return data;
 }
