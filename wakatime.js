@@ -2,7 +2,7 @@ var WakaTime = {
     lastObj:  null,
     lastTimeUsed: 0,
 
-    pushHeartBeat: function(filePath, isWrite) {
+    pushHeartBeat: function(filePath, isWrite, category) {
         let currentDate = Date.now()
 
         // for further tweaks : this is for less than 2 mins, etc
@@ -12,6 +12,7 @@ var WakaTime = {
 
         let args = [
             "--entity", filePath,
+            "--category", category
             // Add plugin later 
         ]
 
@@ -32,3 +33,8 @@ var WakaTime = {
         this.lastTimeUsed = currentDate;
     }
 }
+
+
+tiled.mapOpened.connect(function(map) {
+    WakaTime.pushHeartBeat(map.fileName, false, "opened tilemap")
+});
