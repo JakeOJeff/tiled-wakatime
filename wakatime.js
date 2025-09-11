@@ -25,7 +25,7 @@ var WakaTime = {
 
         try {
             let proc = new Process();
-            proc.startDetached();  // run without waiting
+            proc.exec(exe, args)
             tiled.log("Started wakatime for " + filePath);
         } catch (e) {
             tiled.log("ERR: Failed to run wakatime : " + e);
