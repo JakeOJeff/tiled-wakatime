@@ -13,8 +13,17 @@ Go to your Tiled Extensions Folder
 | macOS | ~/Library/Preferences/Tiled/extensions/ |
 | Linux | ~/.config/tiled/extensions/ |
 
-Clone this Repo
-```
-    git clone https://github.com/JakeOJeff/tiled-wakatime.git
+Clone this Repo ( or Download & Extract Zip )
 
+```bash
+    git clone https://github.com/JakeOJeff/tiled-wakatime.git
 ```
+
+
+## Usage
+
+Time is automatically tracked and deployed on Startup if you already have hackatime connected and a ~/.wakatime.cfg file.
+
+### View Tracked Time
+
+Click on 'View' in the Top Ribbon -> Show Wakatime
