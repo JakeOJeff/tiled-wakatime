@@ -1,16 +1,9 @@
-/* ============================================================
-   Tiled WakaTime Integration
-   ============================================================ */
 
-const SCRIPT_DIR = FileInfo.path(__filename);
-const HEARTBEAT_INTERVAL = 120000; // 2 minutes
+const HEARTBEAT_INTERVAL = 12000; // 2 minutes
 const WAKATIME_EXE = "E:/Wakatime/wakatime-cli.exe"; // CHANGE IF NEEDED
 
-let startTime = Date.now();
 
-/* ============================================================
-   Utility: Elapsed Time Action
-   ============================================================ */
+let startTime = Date.now();
 
 function showElapsedTime() {
     let elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -22,7 +15,6 @@ function showElapsedTime() {
 let displayTimerAction = tiled.registerAction("displayTimer", function () {
     showElapsedTime();
 });
-
 displayTimerAction.text = "Display WakaTime Session";
 
 tiled.extendMenu("View", [
@@ -30,121 +22,128 @@ tiled.extendMenu("View", [
     { separator: true }
 ]);
 
-/* ============================================================
-   WakaTime Core
-   ============================================================ */
 
+// ==========================
+// GIT PROJECT DETECTION
+// ==========================
+function findGitProjectRoot(filePath) {
+    let dir = FileInfo.path(filePath);
+
+    while (dir) {
+        let gitPath = FileInfo.joinPaths(dir, ".git");
+
+        // IMPORTANT: File.exists, not FileInfo.exists
+        if (File.exists(gitPath)) {
+            return dir;
+        }
+
+        let parent = FileInfo.path(dir);
+
+        // Stop at filesystem root
+        if (!parent || parent === dir) {
+            break;
+        }
+
+        dir = parent;
+    }
+
+    return null;
+}
+function getGitProjectName(filePath) {
+    let root = findGitProjectRoot(filePath);
+    return root ? FileInfo.fileName(root) : "Unknown Project";
+}
+
+
+// ==========================
+// WAKATIME CORE
+// ==========================
 var WakaTime = {
     lastEntity: null,
     lastHeartbeat: 0,
 
-    heartbeat: function (entityPath, isWrite, category) {
+    heartbeat: function (entityPath, isWrite, category, action) {
         let now = Date.now();
+        let projectName = getGitProjectName(entityPath);
 
-        // Absolute path is CRITICAL for Git project detection
-        let absPath = FileInfo.absolutePath(entityPath);
-
-        // Debounce non-write heartbeats
         if (
             !isWrite &&
-            this.lastEntity === absPath &&
+            this.lastEntity === entityPath &&
             (now - this.lastHeartbeat) < HEARTBEAT_INTERVAL
         ) {
             return;
         }
 
         let args = [
-            "--entity", absPath,
+            "--entity", entityPath,
             "--category", category,
-            "--language", "Tiled"
+            "--language", "Tiled",
+            "--plugin", "tiled-wakatime/1.0.0"
         ];
 
-        if (isWrite) {
-            args.push("--write");
-        }
+        if (isWrite) args.push("--write");
 
         try {
             let proc = new Process();
             proc.exec(WAKATIME_EXE, args);
-            tiled.log(`WakaTime heartbeat → ${absPath}`);
+
+            tiled.log(
+                `[WakaTime] Project="${projectName}" ` +
+                `Action="${action}" ` +
+                `Category="${category}" ` +
+                `Entity="${entityPath}"`
+            );
         } catch (e) {
             tiled.log("ERR: WakaTime failed → " + e);
         }
 
-        this.lastEntity = absPath;
+        this.lastEntity = entityPath;
         this.lastHeartbeat = now;
     }
 };
 
-/* ============================================================
-   API Key Handling
-   ============================================================ */
+// ==========================
+// ASSET HANDLING (SAFE)
+// ==========================
+let currentAsset = null;
 
-function getKeyPath() {
-    return FileInfo.joinPaths(SCRIPT_DIR, "key.txt");
+function onAssetModified() {
+    if (!tiled.activeAsset) return;
+            tiled.log("Asset Changed");
+
+    WakaTime.heartbeat(
+        tiled.activeAsset.fileName,
+        true,
+        "building",
+        "asset-edit"
+    );
 }
-
-function saveToFile(filePath, content) {
-    try {
-        let file = new File(filePath);
-        if (!file.open(File.WriteOnly | File.Text)) return false;
-        file.write(content);
-        file.close();
-        return true;
-    } catch (e) {
-        tiled.log("ERR saving file: " + e);
-        return false;
-    }
-}
-
-function loadFromFile(filePath) {
-    try {
-        let file = new File(filePath);
-        if (!file.open(File.ReadOnly | File.Text)) return null;
-        let content = file.readAll();
-        file.close();
-        return content.trim();
-    } catch (e) {
-        return null;
-    }
-}
-
-function ensureApiKey() {
-    let keyPath = getKeyPath();
-    let key = loadFromFile(keyPath);
-
-    if (key) {
-        tiled.log("WakaTime API key loaded");
-        return;
-    }
-
-    let result = tiled.prompt("Enter WakaTime API key", "");
-    if (result !== null && result.trim() !== "") {
-        saveToFile(keyPath, result.trim());
-        tiled.log("WakaTime API key saved");
-    }
-}
-
-/* ============================================================
-   Tiled Event Hooks
-   ============================================================ */
 
 tiled.activeAssetChanged.connect(function (asset) {
+    if (currentAsset) {
+        try {
+            currentAsset.modifiedChanged.disconnect(onAssetModified);
+        } catch (e) {}
+    }
+
+    currentAsset = asset;
     if (!asset) return;
 
-    ensureApiKey();
+    let projectName = getGitProjectName(asset.fileName);
+    tiled.log(`[Asset] Opened: ${asset.fileName}`);
+    tiled.log(`[Project] ${projectName}`);
 
-    tiled.log("Active asset: " + asset.fileName);
-    WakaTime.heartbeat(asset.fileName, false, "debugging");
+    WakaTime.heartbeat(
+        asset.fileName,
+        false,
+        "debugging",
+        "asset-open"
+    );
+
+    asset.modifiedChanged.connect(onAssetModified);
 });
 
-if (tiled.activeAsset) {
-    tiled.log("Active asset exists at startup");
-}
-
-tiled.activeAsset.modifiedChanged.connect(function () {
-    if (!tiled.activeAsset) return;
-
-    tiled.log("Asset modified");
-    WakaTime.heartbeat(tiled.activeAsset.fileName, true, "building");
-});
+// ==========================
+// STARTUP LOG
+// ==========================
+tiled.log("[WakaTime] Tiled Git-based tracker loaded");
