@@ -1,5 +1,5 @@
 
-const HEARTBEAT_INTERVAL = 12000; // 2 minutes
+const HEARTBEAT_INTERVAL = 4000; // 2 minutes
 const WAKATIME_EXE = "E:/Wakatime/wakatime-cli.exe"; // CHANGE IF NEEDED
 
 
