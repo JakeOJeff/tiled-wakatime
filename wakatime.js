@@ -1,125 +1,98 @@
+/* ============================================================
+   Tiled WakaTime Integration
+   ============================================================ */
 
 const SCRIPT_DIR = FileInfo.path(__filename);
+const HEARTBEAT_INTERVAL = 120000; // 2 minutes
+const WAKATIME_EXE = "E:/Wakatime/wakatime-cli.exe"; // CHANGE IF NEEDED
+
 let startTime = Date.now();
+
+/* ============================================================
+   Utility: Elapsed Time Action
+   ============================================================ */
 
 function showElapsedTime() {
     let elapsed = Math.floor((Date.now() - startTime) / 1000);
     let minutes = Math.floor(elapsed / 60);
     let seconds = elapsed % 60;
-    tiled.alert("Elapsed editing time: " + minutes + "m " + seconds + "s");
+    tiled.alert(`Elapsed editing time: ${minutes}m ${seconds}s`);
 }
 
-var displayTimerAction = tiled.registerAction("displayTimer", function (action) {
-    tiled.log(showElapsedTime());
-    // tiled.log(action.text + " was " + (action.checked ? "checked" : "unchecked"))
-})
+let displayTimerAction = tiled.registerAction("displayTimer", function () {
+    showElapsedTime();
+});
 
-displayTimerAction.text = "Display Wakatime"
+displayTimerAction.text = "Display WakaTime Session";
+
 tiled.extendMenu("View", [
     { action: "displayTimer", before: "ShowGrid" },
     { separator: true }
 ]);
+
+/* ============================================================
+   WakaTime Core
+   ============================================================ */
+
 var WakaTime = {
-    lastObj: null,
-    lastTimeUsed: 0,
+    lastEntity: null,
+    lastHeartbeat: 0,
 
-    pushHeartBeat: function (filePath, isWrite, category) {
-        let currentDate = Date.now()
+    heartbeat: function (entityPath, isWrite, category) {
+        let now = Date.now();
 
-        // for further tweaks : this is for less than 2 mins, etc
-        // if (!isWrite && this.lastObj == filePath && (now - lastTime < 120000)) {
-        //     return;
-        // }
+        // Absolute path is CRITICAL for Git project detection
+        let absPath = FileInfo.absolutePath(entityPath);
+
+        // Debounce non-write heartbeats
+        if (
+            !isWrite &&
+            this.lastEntity === absPath &&
+            (now - this.lastHeartbeat) < HEARTBEAT_INTERVAL
+        ) {
+            return;
+        }
 
         let args = [
-            "--entity", filePath,
-            "--category", category
-            // Add plugin later 
-        ]
+            "--entity", absPath,
+            "--category", category,
+            "--language", "Tiled"
+        ];
 
         if (isWrite) {
             args.push("--write");
         }
 
-        //temp exe location
-        let exe = "E:/Wakatime/wakatime-cli.exe";
-
         try {
             let proc = new Process();
-            proc.exec(exe, args)
-            tiled.log("Started wakatime for " + filePath);
+            proc.exec(WAKATIME_EXE, args);
+            tiled.log(`WakaTime heartbeat → ${absPath}`);
         } catch (e) {
-            tiled.log("ERR: Failed to run wakatime : " + e);
+            tiled.log("ERR: WakaTime failed → " + e);
         }
 
-
-        this.lastObj = filePath;
-        this.lastTimeUsed = currentDate;
+        this.lastEntity = absPath;
+        this.lastHeartbeat = now;
     }
+};
 
-    
+/* ============================================================
+   API Key Handling
+   ============================================================ */
+
+function getKeyPath() {
+    return FileInfo.joinPaths(SCRIPT_DIR, "key.txt");
 }
-//
-
-tiled.activeAssetChanged.connect(function (asset) {
-    if (!asset) {
-        tiled.log("No active asset");
-        return;
-    }
-    let keyFile = getLocalPath("key.txt");
-
-    let loadkey = loadFromFile(keyFile);
-    if (loadkey) {
-        tiled.log("Loaded API key");
-    }
-    else {
-        let result = tiled.prompt("Enter Wakatime API key", "");
-
-        if (result != null || result.trim() != "") {
-            saveToFile("./key.txt", result)
-            loadkey = result.trim();
-        }
-
-    }
-
-
-
-    tiled.log("Active asset changed: " + asset.fileName);
-
-    WakaTime.pushHeartBeat(asset.fileName, false, "debugging");
-});
-
-//
-if (tiled.activeAsset !== null) {
-    let oAList = tiled.openAssets;
-    for (let i = 0; i < oAList.length; ++i) {
-        tiled.log(i + ": " + oAList[i].fileName);
-    }
-    tiled.log("Active asset exists");
-}
-//
-tiled.activeAsset.modifiedChanged.connect(function () {
-    if (tiled.activeAsset) {
-        tiled.log("modifying objects");
-        WakaTime.pushHeartBeat(tiled.activeAsset.fileName, false, "building");
-    }
-});
-//
-
 
 function saveToFile(filePath, content) {
     try {
-        let file = new File(filePath);              // step 1
-        if (!file.open(File.WriteOnly | File.Text)) { // step 2
-            tiled.log("ERR: Could not open file for writing: " + filePath);
-            return false;
-        }
-        file.write(content); // step 3
-        file.close();        // step 4
-        tiled.log("Saved Wakatime API key to " + filePath);
+        let file = new File(filePath);
+        if (!file.open(File.WriteOnly | File.Text)) return false;
+        file.write(content);
+        file.close();
         return true;
     } catch (e) {
-        tiled.log("ERR: Failed to save file: " + e);
+        tiled.log("ERR saving file: " + e);
         return false;
     }
 }
@@ -127,19 +100,51 @@ function saveToFile(filePath, content) {
 function loadFromFile(filePath) {
     try {
         let file = new File(filePath);
-        if (!file.open(File.ReadOnly | File.Text)) {
-            return null;
-        }
+        if (!file.open(File.ReadOnly | File.Text)) return null;
         let content = file.readAll();
         file.close();
         return content.trim();
     } catch (e) {
-        tiled.log("Could not load file (" + filePath + "): " + e);
         return null;
     }
 }
 
+function ensureApiKey() {
+    let keyPath = getKeyPath();
+    let key = loadFromFile(keyPath);
 
-function getLocalPath(fileName) {
-    return FileInfo.joinPaths(SCRIPT_DIR, fileName);
+    if (key) {
+        tiled.log("WakaTime API key loaded");
+        return;
+    }
+
+    let result = tiled.prompt("Enter WakaTime API key", "");
+    if (result !== null && result.trim() !== "") {
+        saveToFile(keyPath, result.trim());
+        tiled.log("WakaTime API key saved");
+    }
 }
+
+/* ============================================================
+   Tiled Event Hooks
+   ============================================================ */
+
+tiled.activeAssetChanged.connect(function (asset) {
+    if (!asset) return;
+
+    ensureApiKey();
+
+    tiled.log("Active asset: " + asset.fileName);
+    WakaTime.heartbeat(asset.fileName, false, "debugging");
+});
+
+if (tiled.activeAsset) {
+    tiled.log("Active asset exists at startup");
+}
+
+tiled.activeAsset.modifiedChanged.connect(function () {
+    if (!tiled.activeAsset) return;
+
+    tiled.log("Asset modified");
+    WakaTime.heartbeat(tiled.activeAsset.fileName, true, "building");
+});
