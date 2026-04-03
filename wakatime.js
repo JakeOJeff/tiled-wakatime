@@ -1,6 +1,6 @@
 
 const HEARTBEAT_INTERVAL = 4000; // 2 minutes
-const WAKATIME_EXE = "E:/Wakatime/wakatime-cli.exe"; // CHANGE IF NEEDED
+const WAKATIME_EXE = "B:\wakatime\wakatime-cli.exe"; // CHANGE IF NEEDED
 
 
 let startTime = Date.now();
@@ -77,6 +77,7 @@ var WakaTime = {
         let args = [
             "--entity", entityPath,
             "--category", category,
+            "--project", projectName,   // ← add this
             "--language", "Tiled",
             "--plugin", "tiled-wakatime/1.0.0"
         ];
