@@ -106,17 +106,14 @@ function onAssetModified() {
     if (!tiled.activeAsset) return;
     tiled.log("Asset Changed");
 
-    let entityPath = tiled.activeAsset.fileName;
-
-    // Small delay to let Tiled finish any file operations
-    let timer = new QTimer();
-    timer.singleShot = true;
-    timer.interval = 500;
-    timer.triggered.connect(function() {
-        WakaTime.heartbeat(entityPath, true, "building", "asset-edit");
-    });
-    timer.start();
+    WakaTime.heartbeat(
+        tiled.activeAsset.fileName,
+        true,
+        "building",
+        "asset-edit"
+    );
 }
+
 tiled.activeAssetChanged.connect(function (asset) {
     if (currentAsset) {
         try {
