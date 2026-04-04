@@ -1,7 +1,6 @@
-
-const HEARTBEAT_INTERVAL = 4000; // 2 minutes
-const WAKATIME_EXE = "B:\wakatime\wakatime-cli.exe"; // CHANGE IF NEEDED
-
+const HEARTBEAT_INTERVAL = 4000;
+const WAKATIME_EXE = "D:/wakatime-cli-windows-amd64.exe";
+const WAKATIME_CFG = "C:/Users/pauly/AppData/Local/Tiled/extensions/tiled-wakatime/.wakatime.cfg";
 
 let startTime = Date.now();
 
@@ -31,24 +30,17 @@ function findGitProjectRoot(filePath) {
 
     while (dir) {
         let gitPath = FileInfo.joinPaths(dir, ".git");
-
-        // IMPORTANT: File.exists, not FileInfo.exists
         if (File.exists(gitPath)) {
             return dir;
         }
-
         let parent = FileInfo.path(dir);
-
-        // Stop at filesystem root
-        if (!parent || parent === dir) {
-            break;
-        }
-
+        if (!parent || parent === dir) break;
         dir = parent;
     }
 
     return null;
 }
+
 function getGitProjectName(filePath) {
     let root = findGitProjectRoot(filePath);
     return root ? FileInfo.fileName(root) : "Unknown Project";
@@ -75,9 +67,10 @@ var WakaTime = {
         }
 
         let args = [
+            "--config", WAKATIME_CFG,
             "--entity", entityPath,
             "--category", category,
-            "--project", projectName,   // ← add this
+            "--project", projectName,
             "--language", "Tiled",
             "--plugin", "tiled-wakatime/1.0.0"
         ];
@@ -103,23 +96,27 @@ var WakaTime = {
     }
 };
 
+
 // ==========================
-// ASSET HANDLING (SAFE)
+// ASSET HANDLING
 // ==========================
 let currentAsset = null;
 
 function onAssetModified() {
     if (!tiled.activeAsset) return;
-            tiled.log("Asset Changed");
+    tiled.log("Asset Changed");
 
-    WakaTime.heartbeat(
-        tiled.activeAsset.fileName,
-        true,
-        "building",
-        "asset-edit"
-    );
+    let entityPath = tiled.activeAsset.fileName;
+
+    // Small delay to let Tiled finish any file operations
+    let timer = new QTimer();
+    timer.singleShot = true;
+    timer.interval = 500;
+    timer.triggered.connect(function() {
+        WakaTime.heartbeat(entityPath, true, "building", "asset-edit");
+    });
+    timer.start();
 }
-
 tiled.activeAssetChanged.connect(function (asset) {
     if (currentAsset) {
         try {
@@ -143,6 +140,7 @@ tiled.activeAssetChanged.connect(function (asset) {
 
     asset.modifiedChanged.connect(onAssetModified);
 });
+
 
 // ==========================
 // STARTUP LOG
